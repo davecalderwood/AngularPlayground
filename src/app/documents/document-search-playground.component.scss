@@ -31,6 +31,15 @@
   cursor: pointer;
 }
 
+.group-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 /* Modal Overlay Styles */
 .loading-modal-overlay {
   position: fixed;
@@ -83,6 +92,14 @@
 
 .error-message {
   color: #b00020;
+}
+
+.grid-container {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .document-grid {

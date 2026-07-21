@@ -33,106 +33,86 @@ export class DocumentTreeDatasourceFactory {
 
     return {
       changePage: (route: string[], direction: number, api: GridApi) => {
-        const key = `${route[0]}|${route[1]}`;
+        const category = route[route.length - 2];
+        const subcategory = route[route.length - 1];
+        const key = `${category}|${subcategory}`;
         const current = pageMap.get(key) ?? 0;
         pageMap.set(key, Math.max(0, current + direction));
         api.refreshServerSide({ route, purge: false });
       },
       changePageSize: (route: string[], size: number, api: GridApi) => {
-        const key = `${route[0]}|${route[1]}`;
+        const category = route[route.length - 2];
+        const subcategory = route[route.length - 1];
+        const key = `${category}|${subcategory}`;
         pageSizeMap.set(key, size);
         pageMap.set(key, 0); // reset page map
         api.refreshServerSide({ route, purge: true });
       },
       getRows: (params: IServerSideGetRowsParams) => {
         const groupKeys = params.request.groupKeys ?? [];
+        const rowGroupCols = params.request.rowGroupCols ?? [];
+        const hasSection = rowGroupCols.length > 0 && rowGroupCols[0].field === 'section';
+
         const startRow = params.request.startRow ?? 0;
         const endRow = params.request.endRow ?? startRow + 15;
 
         console.log('AG Grid request:', params.request);
-        console.log('groupKeys:', groupKeys);
+        console.log('groupKeys:', groupKeys, 'hasSection:', hasSection);
 
-        if (groupKeys.length === 0) {
-          const categoryRows = flatRows.filter(row =>
-            row.rowType === 'category'
-          );
+        // State machine based on current depth and whether sections are used
+        const level = groupKeys.length;
 
-          params.success({
-            rowData: categoryRows.slice(startRow, endRow),
-            rowCount: categoryRows.length
-          });
-
-          return;
-        }
-
-        if (groupKeys.length === 1) {
-          const categoryName = groupKeys[0];
-
-          const subcategoryRows = flatRows.filter(row =>
-            row.rowType === 'subcategory' &&
-            row.category === categoryName
-          );
-
-          params.success({
-            rowData: subcategoryRows.slice(startRow, endRow),
-            rowCount: subcategoryRows.length
-          });
-
-          return;
-        }
-
-        if (groupKeys.length === 2) {
-          const [category, subcategory] = groupKeys;
-          const PAGE_SIZE = pageSizeMap.get(`${category}|${subcategory}`) ?? 10;
-          const currentPageIdx = pageMap.get(`${category}|${subcategory}`) ?? 0;
-          const offset = currentPageIdx * PAGE_SIZE;
-
-          const totalRowsForSubcategory = this.getSubcategoryDocumentCount(
-            flatRows,
-            category,
-            subcategory
-          );
-
-          const request: QueryTableRequest = {
-            offset: offset,
-            page_size: PAGE_SIZE,
-            filter_by: this.buildDocumentFilterBy(category, subcategory),
-            order_by: this.buildOrderBy(params.request.sortModel)
-          };
-
-          this.documentDataService
-            .getDocumentsForSubcategory(jobId, request)
-            .subscribe({
-              next: documents => {
-                const documentRows = documents.map(document =>
-                  this.toDocumentRow(document, category, subcategory)
-                );
-
-                if (totalRowsForSubcategory > 0) {
-                  documentRows.push({
-                    id: `pagination|${category}|${subcategory}`,
-                    rowType: 'pagination',
-                    category,
-                    subcategory,
-                    pageNumber: currentPageIdx + 1,
-                    totalPages: Math.ceil(totalRowsForSubcategory / PAGE_SIZE),
-                    pageSize: PAGE_SIZE
-                  } as any);
-                }
-
-                // Strictly mapping rowCount to length disables AG Grid's native infinite scroll behavior
-                // for this group, stopping it from automatically requesting more blocks as you scroll.
-                params.success({
-                  rowData: documentRows,
-                  rowCount: documentRows.length
-                });
-              },
-              error: error => {
-                console.error('Failed to load documents for subcategory', error);
-                params.fail();
-              }
+        if (level === 0) {
+          if (hasSection) {
+            // Return unique sections
+            const sectionNames = Array.from(new Set(flatRows.filter(row => row.rowType === 'category').map(row => row.section!).filter(Boolean)));
+            const sectionRows = sectionNames.map(section => {
+              const count = flatRows.filter(row => row.rowType === 'subcategory' && row.section === section).reduce((acc, curr) => acc + (curr.documentCount ?? 0), 0);
+              return {
+                id: `section|${section}`,
+                rowType: 'section',
+                name: section,
+                section: section,
+                documentCount: count
+              } as DocumentTreeRow;
             });
+            params.success({ rowData: sectionRows.slice(startRow, endRow), rowCount: sectionRows.length });
+          } else {
+            // Return categories
+            const categoryRows = flatRows.filter(row => row.rowType === 'category');
+            params.success({ rowData: categoryRows.slice(startRow, endRow), rowCount: categoryRows.length });
+          }
+          return;
+        }
 
+        if (level === 1) {
+          if (hasSection) {
+            const sectionName = groupKeys[0];
+            const categoryRows = flatRows.filter(row => row.rowType === 'category' && row.section === sectionName);
+            params.success({ rowData: categoryRows.slice(startRow, endRow), rowCount: categoryRows.length });
+          } else {
+            const categoryName = groupKeys[0];
+            const subcategoryRows = flatRows.filter(row => row.rowType === 'subcategory' && row.category === categoryName);
+            params.success({ rowData: subcategoryRows.slice(startRow, endRow), rowCount: subcategoryRows.length });
+          }
+          return;
+        }
+
+        if (level === 2) {
+          if (hasSection) {
+            const [section, categoryName] = groupKeys;
+            const subcategoryRows = flatRows.filter(row => row.rowType === 'subcategory' && row.category === categoryName);
+            params.success({ rowData: subcategoryRows.slice(startRow, endRow), rowCount: subcategoryRows.length });
+          } else {
+            const [category, subcategory] = groupKeys;
+            this.fetchDocumentsForSubcategory(jobId, flatRows, category, subcategory, params, pageMap, pageSizeMap);
+          }
+          return;
+        }
+
+        if (level === 3 && hasSection) {
+          const [section, category, subcategory] = groupKeys;
+          this.fetchDocumentsForSubcategory(jobId, flatRows, category, subcategory, params, pageMap, pageSizeMap);
           return;
         }
 
@@ -142,6 +122,64 @@ export class DocumentTreeDatasourceFactory {
         });
       }
     };
+  }
+
+  private fetchDocumentsForSubcategory(
+    jobId: string,
+    flatRows: DocumentTreeRow[],
+    category: string,
+    subcategory: string,
+    params: IServerSideGetRowsParams,
+    pageMap: Map<string, number>,
+    pageSizeMap: Map<string, number>
+  ): void {
+    const PAGE_SIZE = pageSizeMap.get(`${category}|${subcategory}`) ?? 10;
+    const currentPageIdx = pageMap.get(`${category}|${subcategory}`) ?? 0;
+    const offset = currentPageIdx * PAGE_SIZE;
+
+    const totalRowsForSubcategory = this.getSubcategoryDocumentCount(
+      flatRows,
+      category,
+      subcategory
+    );
+
+    const request: QueryTableRequest = {
+      offset: offset,
+      page_size: PAGE_SIZE,
+      filter_by: this.buildDocumentFilterBy(category, subcategory, params.request.filterModel),
+      order_by: this.buildOrderBy(params.request.sortModel)
+    };
+
+    this.documentDataService
+      .getDocumentsForSubcategory(jobId, request)
+      .subscribe({
+        next: documents => {
+          const documentRows = documents.map(document =>
+            this.toDocumentRow(document, category, subcategory)
+          );
+
+          if (totalRowsForSubcategory > 0) {
+            documentRows.push({
+              id: `pagination|${category}|${subcategory}`,
+              rowType: 'pagination',
+              category,
+              subcategory,
+              pageNumber: currentPageIdx + 1,
+              totalPages: Math.ceil(totalRowsForSubcategory / PAGE_SIZE),
+              pageSize: PAGE_SIZE
+            } as any);
+          }
+
+          params.success({
+            rowData: documentRows,
+            rowCount: documentRows.length
+          });
+        },
+        error: error => {
+          console.error('Failed to load documents for subcategory', error);
+          params.fail();
+        }
+      });
   }
 
   private flattenSummary(summary: DocumentTreeSummaryDto): DocumentTreeRow[] {
@@ -234,11 +272,46 @@ export class DocumentTreeDatasourceFactory {
     } as DocumentTreeRow;
   }
 
-  private buildDocumentFilterBy(category: string, subcategory: string): string {
+  private buildDocumentFilterBy(category: string, subcategory: string, filterModel?: any): string {
     const safeCategory = this.escapeSqlValue(category);
     const safeSubcategory = this.escapeSqlValue(subcategory);
 
-    return `WHERE category_desc = '${safeCategory}' AND subcategory_desc = '${safeSubcategory}'`;
+    let filterString = `WHERE category_desc = '${safeCategory}' AND subcategory_desc = '${safeSubcategory}'`;
+
+    if (filterModel) {
+      const allowedColumns: Record<string, string> = {
+        name: 'name',
+        type: 'type',
+        status: 'status',
+        author: 'author',
+        createdDate: 'created_date'
+      };
+
+      Object.keys(filterModel).forEach(colId => {
+        const column = allowedColumns[colId];
+        if (column && filterModel[colId]) {
+          const filterInfo = filterModel[colId];
+          if (filterInfo.filterType === 'text') {
+            const filterValue = this.escapeSqlValue(filterInfo.filter);
+            if (filterInfo.type === 'contains') {
+              filterString += ` AND ${column} LIKE '%${filterValue}%'`;
+            } else if (filterInfo.type === 'equals') {
+              filterString += ` AND ${column} = '${filterValue}'`;
+            } else if (filterInfo.type === 'startsWith') {
+              filterString += ` AND ${column} LIKE '${filterValue}%'`;
+            } else if (filterInfo.type === 'endsWith') {
+              filterString += ` AND ${column} LIKE '%${filterValue}'`;
+            } else if (filterInfo.type === 'notContains') {
+              filterString += ` AND ${column} NOT LIKE '%${filterValue}%'`;
+            } else if (filterInfo.type === 'notEqual') {
+              filterString += ` AND ${column} != '${filterValue}'`;
+            }
+          }
+        }
+      });
+    }
+
+    return filterString;
   }
 
   private buildOrderBy(sortModel: any[] | undefined): string {

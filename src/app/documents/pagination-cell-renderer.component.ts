@@ -16,12 +16,14 @@ interface PaginationContext {
   componentParent?: {
     changePageSubcategory?: (
       path: [string, string],
-      direction: number
+      direction: number,
+      api: any
     ) => void;
 
     changePageSizeSubcategory?: (
       path: [string, string],
-      pageSize: number
+      pageSize: number,
+      api: any
     ) => void;
   };
 }
@@ -50,7 +52,7 @@ type PaginationCellParams = ICellRendererParams<
         >
           Previous
         </button>
-        
+
         <label>
           Size:
           <select [value]="pageSize" (change)="onPageSizeChange($event)">
@@ -175,9 +177,19 @@ export class PaginationCellRendererComponent
       return;
     }
 
+    const route = this.params.node.parent?.getRoute() as string[] | undefined;
+
+    if (!route || route.length < 2) {
+        return;
+    }
+    
+    // Pass only the last two elements of the route which are the category and subcategory
+    const path: [string, string] = [route[route.length - 2], route[route.length - 1]];
+
     this.params.context?.componentParent?.changePageSizeSubcategory?.(
-      [row.category, row.subcategory],
-      newSize
+      path,
+      newSize,
+      this.params.api
     );
   }
 
@@ -188,9 +200,19 @@ export class PaginationCellRendererComponent
       return;
     }
 
+    const route = this.params.node.parent?.getRoute() as string[] | undefined;
+
+    if (!route || route.length < 2) {
+      return;
+    }
+
+    // Pass only the last two elements of the route which are the category and subcategory
+    const path: [string, string] = [route[route.length - 2], route[route.length - 1]];
+
     this.params.context?.componentParent?.changePageSubcategory?.(
-      [row.category, row.subcategory],
-      direction
+      path,
+      direction,
+      this.params.api
     );
   }
 

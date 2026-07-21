@@ -39,46 +39,99 @@ import 'ag-grid-enterprise';
 export class DocumentSearchPlaygroundComponent {
   searchControl = new FormControl<string>('', { nonNullable: true });
 
-  private gridApi?: GridApi<DocumentTreeRow>;
+  private leftGridApi?: GridApi<DocumentTreeRow>;
+  private rightGridApi?: GridApi<DocumentTreeRow>;
+  
   private pendingSummary?: DocumentTreeSummaryDto;
   private pendingJobId?: string;
   private currentDatasource?: CustomServerSideDatasource;
 
   searching = false;
   showGrid = true;
+  isSplitView = false;
   errorMessage = '';
+  isGroupedBySection = false;
 
-  public changePageSubcategory = (route: string[], direction: number) => {
-    if (this.currentDatasource && this.currentDatasource.changePage && this.gridApi) {
-      const [category, subcategory] = route;
+  public changePageSubcategory = (route: string[], direction: number, api?: GridApi) => {
+    if (this.currentDatasource && this.currentDatasource.changePage && api) {
+      const category = route[route.length - 2];
+      const subcategory = route[route.length - 1];
       
-      this.gridApi.forEachNode(node => {
+      api.forEachNode(node => {
         if (node.data?.category === category && node.data?.subcategory === subcategory && node.data?.rowType === 'document') {
           node.data['isLoading'] = true;
         }
       });
-      this.gridApi.refreshCells({ force: true });
+      api.refreshCells({ force: true });
 
-      this.currentDatasource.changePage(route, direction, this.gridApi);
+      this.currentDatasource.changePage(route, direction, api);
     }
   };
 
-  public changePageSizeSubcategory = (route: string[], size: number) => {
-    if (this.currentDatasource && this.currentDatasource.changePageSize && this.gridApi) {
-      const [category, subcategory] = route;
+  public changePageSizeSubcategory = (route: string[], size: number, api?: GridApi) => {
+    if (this.currentDatasource && this.currentDatasource.changePageSize && api) {
+      const category = route[route.length - 2];
+      const subcategory = route[route.length - 1];
       
-      this.gridApi.forEachNode(node => {
+      api.forEachNode(node => {
         if (node.data?.category === category && node.data?.subcategory === subcategory && node.data?.rowType === 'document') {
           node.data['isLoading'] = true;
         }
       });
-      this.gridApi.refreshCells({ force: true });
+      api.refreshCells({ force: true });
 
-      this.currentDatasource.changePageSize(route, size, this.gridApi);
+      this.currentDatasource.changePageSize(route, size, api);
     }
   };
+
+  toggleSplitView(): void {
+    this.isSplitView = !this.isSplitView;
+    if (this.isSplitView && this.currentDatasource && this.rightGridApi) {
+        this.rightGridApi.setGridOption('serverSideDatasource', this.currentDatasource);
+    }
+  }
+
+  toggleSectionGroup(): void {
+    this.isGroupedBySection = !this.isGroupedBySection;
+    
+    const applyToApi = (api?: GridApi) => {
+      if (api) {
+        if (this.isGroupedBySection) {
+          api.applyColumnState({
+            state: [
+              { colId: 'section', rowGroupIndex: 0 },
+              { colId: 'category', rowGroupIndex: 1 },
+              { colId: 'subcategory', rowGroupIndex: 2 }
+            ]
+          });
+        } else {
+          api.applyColumnState({
+            state: [
+              { colId: 'section', rowGroupIndex: null },
+              { colId: 'category', rowGroupIndex: 0 },
+              { colId: 'subcategory', rowGroupIndex: 1 }
+            ]
+          });
+        }
+      }
+    };
+    
+    applyToApi(this.leftGridApi);
+    applyToApi(this.rightGridApi);
+    
+    // Trigger a fresh search to rebuild tree if necessary
+    if (this.searchControl.value.trim()) {
+       this.runSearch();
+    }
+  }
 
   columnDefs: ColDef<DocumentTreeRow>[] = [
+    {
+      field: 'section',
+      rowGroup: false, // Initially un-grouped
+      enableRowGroup: true,
+      hide: true
+    },
     {
       field: 'category',
       rowGroup: true,
@@ -147,9 +200,6 @@ export class DocumentSearchPlaygroundComponent {
     },
     fullWidthCellRenderer: PaginationCellRendererComponent,
 
-    // Removed global pagination logic (pagination: true, paginateChildRows: true)
-    // Server-Side Row Model instead relies on Infinite Scrolling per group!
-    // As you scroll down an expanded subcategory, it fetches cacheBlockSize (15) at a time.
     cacheBlockSize: 100, // Large enough to grab massive single top-level category hits without requesting more blocks
 
     maxBlocksInCache: 5,
@@ -170,7 +220,7 @@ export class DocumentSearchPlaygroundComponent {
             return groupName;
           }
 
-          if (row.rowType === 'category' || row.rowType === 'subcategory') {
+          if (row.rowType === 'section' || row.rowType === 'category' || row.rowType === 'subcategory') {
             return `${groupName} (${row.documentCount ?? 0})`;
           }
 
@@ -194,17 +244,28 @@ export class DocumentSearchPlaygroundComponent {
     private datasourceFactory: DocumentTreeDatasourceFactory
   ) {}
 
-  onGridReady(params: GridReadyEvent<DocumentTreeRow>): void {
-    this.gridApi = params.api;
+  onLeftGridReady(params: GridReadyEvent<DocumentTreeRow>): void {
+    this.leftGridApi = params.api;
 
     if (this.pendingSummary && this.pendingJobId) {
       this.applySummaryToGrid(this.pendingSummary, this.pendingJobId);
     }
   }
 
+  onRightGridReady(params: GridReadyEvent<DocumentTreeRow>): void {
+    this.rightGridApi = params.api;
+
+    if (this.currentDatasource) {
+      this.rightGridApi.setGridOption('serverSideDatasource', this.currentDatasource);
+    }
+  }
+
   collapseAll(): void {
-    if (this.gridApi) {
-      this.gridApi.collapseAll();
+    if (this.leftGridApi) {
+      this.leftGridApi.collapseAll();
+    }
+    if (this.rightGridApi) {
+      this.rightGridApi.collapseAll();
     }
   }
 
@@ -267,7 +328,7 @@ export class DocumentSearchPlaygroundComponent {
     summary: DocumentTreeSummaryDto,
     jobId: string
   ): void {
-    if (!this.gridApi || this.gridApi.isDestroyed()) {
+    if (!this.leftGridApi || this.leftGridApi.isDestroyed()) {
       this.pendingSummary = summary;
       this.pendingJobId = jobId;
       return;
@@ -275,27 +336,35 @@ export class DocumentSearchPlaygroundComponent {
 
     this.currentDatasource = this.datasourceFactory.create(summary, jobId);
 
-    this.gridApi.setGridOption('serverSideDatasource', this.currentDatasource);
+    this.leftGridApi.setGridOption('serverSideDatasource', this.currentDatasource);
+    if (this.isSplitView && this.rightGridApi) {
+      this.rightGridApi.setGridOption('serverSideDatasource', this.currentDatasource);
+    }
 
     this.pendingSummary = undefined;
     this.pendingJobId = undefined;
   }
 
   private clearGrid(): void {
-    if (!this.gridApi || this.gridApi.isDestroyed()) {
-      return;
-    }
-
     const emptySummary: DocumentTreeSummaryDto = {
       categories: []
     };
 
     const emptyJobId = 'empty-job';
 
-    this.gridApi.setGridOption(
-      'serverSideDatasource',
-      this.datasourceFactory.create(emptySummary, emptyJobId)
-    );
+    if (this.leftGridApi && !this.leftGridApi.isDestroyed()) {
+      this.leftGridApi.setGridOption(
+        'serverSideDatasource',
+        this.datasourceFactory.create(emptySummary, emptyJobId)
+      );
+    }
+    
+    if (this.rightGridApi && !this.rightGridApi.isDestroyed()) {
+      this.rightGridApi.setGridOption(
+        'serverSideDatasource',
+        this.datasourceFactory.create(emptySummary, emptyJobId)
+      );
+    }
   }
 
   private buildQueryText(searchText: string): string {
@@ -311,9 +380,11 @@ export class DocumentSearchPlaygroundComponent {
 
     topLevelRows.forEach(row => {
       const categoryName = String(row.desc);
+      const section = this.determineSection(categoryName);
 
       categoryMap.set(categoryName, {
         category: categoryName,
+        section,
         documentCount: row.count ?? 0,
         subcategories: []
       });
@@ -327,8 +398,10 @@ export class DocumentSearchPlaygroundComponent {
       let category = categoryMap.get(categoryName);
 
       if (!category) {
+        const section = this.determineSection(categoryName);
         category = {
           category: categoryName,
+          section,
           documentCount: 0,
           subcategories: []
         };
@@ -342,6 +415,7 @@ export class DocumentSearchPlaygroundComponent {
 
           category: categoryName,
           subcategory: row.desc,
+          section: category.section,
           documentCount: row.count ?? 0
         });
       });
@@ -356,5 +430,15 @@ export class DocumentSearchPlaygroundComponent {
     return {
       categories: Array.from(categoryMap.values())
     };
+  }
+
+  private determineSection(categoryName: string): string {
+    if (categoryName === 'Finance' || categoryName === 'Legal') {
+      return 'Section A';
+    }
+    if (categoryName === 'Management' || categoryName === 'Human Resources') {
+      return 'Section B';
+    }
+    return 'Section C';
   }
 }

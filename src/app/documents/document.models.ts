@@ -18,6 +18,7 @@ export interface DocumentTreeSummaryDto {
 
 export interface CategorySummaryDto {
   category: string;
+  section?: string; // Added section
   documentCount: number;
   subcategories: SubcategorySummaryDto[];
 
@@ -28,18 +29,20 @@ export interface CategorySummaryDto {
 export interface SubcategorySummaryDto {
   category: string;
   subcategory: string;
+  section?: string; // Added section
   documentCount: number;
 
   // Allow future passthrough properties from API
   [key: string]: any;
 }
 
-export type DocumentTreeRowType = 'category' | 'subcategory' | 'document' | 'pagination';
+export type DocumentTreeRowType = 'section' | 'category' | 'subcategory' | 'document' | 'pagination';
 
 export interface DocumentTreeRow {
   id: string;
   rowType: DocumentTreeRowType;
 
+  section?: string;
   category?: string;
   subcategory?: string;
 

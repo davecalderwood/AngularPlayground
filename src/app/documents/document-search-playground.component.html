@@ -27,6 +27,18 @@
       >
         Collapse All
       </button>
+
+      <button
+        type="button"
+        (click)="toggleSplitView()"
+        [disabled]="searching || !showGrid"
+      >
+        {{ isSplitView ? 'Close Split View' : 'Split View' }}
+      </button>
+
+      <label class="group-section-toggle">
+        <input type="checkbox" [checked]="isGroupedBySection" (change)="toggleSectionGroup()" /> Group by Section
+      </label>
     </div>
 
     <!-- The overlay modal activated during the search process -->
@@ -43,12 +55,22 @@
     </div>
   </div>
 
-  <ag-grid-angular
-    *ngIf="showGrid"
-    class="ag-theme-alpine document-grid"
-    [columnDefs]="columnDefs"
-    [defaultColDef]="defaultColDef"
-    [gridOptions]="gridOptions"
-    (gridReady)="onGridReady($event)">
-  </ag-grid-angular>
+  <div class="grid-container" *ngIf="showGrid" [class.split-view]="isSplitView">
+    <ag-grid-angular
+      class="ag-theme-alpine document-grid"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [gridOptions]="gridOptions"
+      (gridReady)="onLeftGridReady($event)">
+    </ag-grid-angular>
+
+    <ag-grid-angular
+      *ngIf="isSplitView"
+      class="ag-theme-alpine document-grid"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [gridOptions]="gridOptions"
+      (gridReady)="onRightGridReady($event)">
+    </ag-grid-angular>
+  </div>
 </div>
