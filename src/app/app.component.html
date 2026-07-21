@@ -1,24 +1,12 @@
-<div class="table-container">
-  <table class="events-table">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Occurrence Start</th>
-        <th>Occurrence End</th>
-        <th>Is Recurring</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (event of expandedEvents; track event.id + '_' + event.occurrenceStartDate.getTime()) {
-        <tr>
-          <td>{{ event.title }}</td>
-          <td>{{ event.occurrenceStartDate | date:'medium' }}</td>
-          <td>{{ event.occurrenceEndDate ? (event.occurrenceEndDate | date:'medium') : 'N/A' }}</td>
-          <td>{{ event.isRecurringInstance ? 'Yes' : 'No' }}</td>
-        </tr>
-      }
-    </tbody>
-  </table>
-</div>
+<header class="app-header">
+  <nav>
+    <ul>
+      <li><a routerLink="/calendar" routerLinkActive="active">Calendar</a></li>
+      <li><a routerLink="/documents" routerLinkActive="active">Documents</a></li>
+    </ul>
+  </nav>
+</header>
 
-<router-outlet />
+<main class="content">
+  <router-outlet />
+</main>

@@ -1,0 +1,158 @@
+.document-search-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  /* Make the component fill the available viewport height minus the header/padding */
+  height: calc(100vh - 120px);
+}
+
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative; /* important so modal behaves predictably if needed, though overlay is fixed */
+  flex-shrink: 0;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-row input {
+  width: 360px;
+  padding: 8px 10px;
+}
+
+.search-row button {
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+/* Modal Overlay Styles */
+.loading-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-modal {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  text-align: center;
+  max-width: 400px;
+}
+
+.loading-modal h3 {
+  margin-top: 15px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.loading-modal p {
+  color: #666;
+  font-size: 0.95em;
+}
+
+/* Spinner Animation */
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border-left-color: #2e5b99;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  color: #b00020;
+}
+
+.document-grid {
+  width: 100%;
+  /* Flex 1 allows the grid to consume all remaining height of the container */
+  flex: 1;
+}
+
+/*
+  This is the visual fix we needed.
+  AG Grid correctly knows category/subcategory parent-child relationships,
+  but the default indent was not visually obvious enough.
+*/
+:host ::ng-deep .ag-theme-alpine .document-group-level-0 {
+  padding-left: 0 !important;
+}
+
+:host ::ng-deep .ag-theme-alpine .document-group-level-1 {
+  padding-left: 36px !important;
+}
+
+:host ::ng-deep .ag-theme-alpine .document-group-level-2 {
+  padding-left: 72px !important;
+}
+
+/* Custom internal row pagination */
+:host ::ng-deep .custom-pagination {
+  display: flex !important;
+  align-items: center;
+  gap: 16px;
+  padding: 5px 0;
+  width: 100%;
+  
+  button {
+    padding: 4px 16px;
+    background: #fdfdfd;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    
+    &:hover:not(:disabled) {
+      background: #eaeaea;
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+  
+  span {
+    font-weight: 500;
+    color: #555;
+  }
+}
+
+/* Skeleton Loader */
+:host ::ng-deep .skeleton-loader {
+  display: inline-block;
+  height: 16px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loadingSkeleton 1.5s infinite;
+  border-radius: 4px;
+  margin-top: 12px;
+}
+
+@keyframes loadingSkeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+

@@ -1,0 +1,54 @@
+<div class="document-search-page">
+  <div class="search-panel">
+    <label for="documentSearch">Document Search</label>
+
+    <div class="search-row">
+      <input
+        id="documentSearch"
+        type="text"
+        [formControl]="searchControl"
+        placeholder="Search documents..."
+        (keydown.enter)="runSearch()"
+      />
+
+      <button
+        type="button"
+        (click)="runSearch()"
+        [disabled]="searching || !searchControl.value.trim()"
+      >
+        Search
+      </button>
+
+      <button
+        type="button"
+        class="collapse-btn"
+        (click)="collapseAll()"
+        [disabled]="searching || !showGrid"
+      >
+        Collapse All
+      </button>
+    </div>
+
+    <!-- The overlay modal activated during the search process -->
+    <div class="loading-modal-overlay" *ngIf="searching">
+      <div class="loading-modal">
+        <div class="spinner"></div>
+        <h3>Searching...</h3>
+        <p>Running search job and polling status every 3 seconds to determine category counts.</p>
+      </div>
+    </div>
+
+    <div class="error-message" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <ag-grid-angular
+    *ngIf="showGrid"
+    class="ag-theme-alpine document-grid"
+    [columnDefs]="columnDefs"
+    [defaultColDef]="defaultColDef"
+    [gridOptions]="gridOptions"
+    (gridReady)="onGridReady($event)">
+  </ag-grid-angular>
+</div>
