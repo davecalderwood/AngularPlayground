@@ -61,7 +61,8 @@
       [columnDefs]="columnDefs"
       [defaultColDef]="defaultColDef"
       [gridOptions]="gridOptions"
-      (gridReady)="onLeftGridReady($event)">
+      (gridReady)="onLeftGridReady($event)"
+      (rowGroupOpened)="onRowGroupOpened($event, true)">
     </ag-grid-angular>
 
     <ag-grid-angular
@@ -70,7 +71,8 @@
       [columnDefs]="columnDefs"
       [defaultColDef]="defaultColDef"
       [gridOptions]="gridOptions"
-      (gridReady)="onRightGridReady($event)">
+      (gridReady)="onRightGridReady($event)"
+      (rowGroupOpened)="onRowGroupOpened($event, false)">
     </ag-grid-angular>
   </div>
 </div>

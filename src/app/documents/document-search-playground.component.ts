@@ -5,7 +5,8 @@ import {
   ColDef,
   GridApi,
   GridOptions,
-  GridReadyEvent
+  GridReadyEvent,
+  RowGroupOpenedEvent
 } from 'ag-grid-community';
 import { AgGridAngular } from 'ag-grid-angular';
 import { EMPTY } from 'rxjs';
@@ -260,12 +261,47 @@ export class DocumentSearchPlaygroundComponent {
     }
   }
 
+  private recentlyExpandedNodesLeft: string[] = [];
+  private recentlyExpandedNodesRight: string[] = [];
+
   collapseAll(): void {
     if (this.leftGridApi) {
       this.leftGridApi.collapseAll();
+      this.recentlyExpandedNodesLeft = [];
     }
     if (this.rightGridApi) {
       this.rightGridApi.collapseAll();
+      this.recentlyExpandedNodesRight = [];
+    }
+  }
+
+  onRowGroupOpened(params: RowGroupOpenedEvent<DocumentTreeRow>, isLeft: boolean): void {
+    if (!params.node.expanded) {
+      const history = isLeft ? this.recentlyExpandedNodesLeft : this.recentlyExpandedNodesRight;
+      const idx = history.indexOf(params.node.id!);
+      if (idx > -1) {
+        history.splice(idx, 1);
+      }
+      return;
+    }
+
+    if (params.node.level !== (this.isGroupedBySection ? 2 : 1)) { 
+        return; 
+    }
+
+    const history = isLeft ? this.recentlyExpandedNodesLeft : this.recentlyExpandedNodesRight;
+    
+    if (params.node.id && !history.includes(params.node.id)) {
+        history.push(params.node.id);
+    }
+
+    if (history.length > 2) {
+      const oldestNodeIdToClose = history.shift();
+      const nodeToClose = params.api.getRowNode(oldestNodeIdToClose!);
+      
+      if (nodeToClose && nodeToClose.expanded) {
+        params.api.setRowNodeExpanded(nodeToClose, false);
+      }
     }
   }
 
