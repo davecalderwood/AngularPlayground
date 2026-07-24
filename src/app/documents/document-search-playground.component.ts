@@ -30,6 +30,14 @@ import {
 
 import 'ag-grid-enterprise';
 
+interface ExpandedNode {
+  id: string;
+  isLeft: boolean;
+  route: string[];
+  pageSize: number;
+  timestamp: number;
+}
+
 @Component({
   selector: 'app-document-search-playground',
   standalone: true,
@@ -46,6 +54,10 @@ export class DocumentSearchPlaygroundComponent {
   private pendingSummary?: DocumentTreeSummaryDto;
   private pendingJobId?: string;
   private currentDatasource?: CustomServerSideDatasource;
+
+  private expandedNodesHistory: ExpandedNode[] = [];
+  private readonly MAX_TOTAL_DOCUMENTS = 250;
+  private readonly MIN_PAGE_SIZE = 5;
 
   searching = false;
   showGrid = true;
@@ -66,22 +78,6 @@ export class DocumentSearchPlaygroundComponent {
       api.refreshCells({ force: true });
 
       this.currentDatasource.changePage(route, direction, api);
-    }
-  };
-
-  public changePageSizeSubcategory = (route: string[], size: number, api?: GridApi) => {
-    if (this.currentDatasource && this.currentDatasource.changePageSize && api) {
-      const category = route[route.length - 2];
-      const subcategory = route[route.length - 1];
-      
-      api.forEachNode(node => {
-        if (node.data?.category === category && node.data?.subcategory === subcategory && node.data?.rowType === 'document') {
-          node.data['isLoading'] = true;
-        }
-      });
-      api.refreshCells({ force: true });
-
-      this.currentDatasource.changePageSize(route, size, api);
     }
   };
 
@@ -273,15 +269,18 @@ export class DocumentSearchPlaygroundComponent {
       this.rightGridApi.collapseAll();
       this.recentlyExpandedNodesRight = [];
     }
+    this.expandedNodesHistory = [];
   }
 
   onRowGroupOpened(params: RowGroupOpenedEvent<DocumentTreeRow>, isLeft: boolean): void {
     if (!params.node.expanded) {
+      // Manual close
       const history = isLeft ? this.recentlyExpandedNodesLeft : this.recentlyExpandedNodesRight;
       const idx = history.indexOf(params.node.id!);
-      if (idx > -1) {
-        history.splice(idx, 1);
-      }
+      if (idx > -1) history.splice(idx, 1);
+      
+      const combinedIdx = this.expandedNodesHistory.findIndex(n => n.id === params.node.id && n.isLeft === isLeft);
+      if (combinedIdx > -1) this.expandedNodesHistory.splice(combinedIdx, 1);
       return;
     }
 
@@ -294,16 +293,115 @@ export class DocumentSearchPlaygroundComponent {
     if (params.node.id && !history.includes(params.node.id)) {
         history.push(params.node.id);
     }
+    
+    // Add to global tracker
+    if (params.node.id) {
+       const route = params.node.getRoute() as string[] | undefined;
+       if (route) {
+         // Subcategory just opened, assume it loads with the default page size (10)
+         this.expandedNodesHistory.push({
+           id: params.node.id,
+           isLeft,
+           route,
+           pageSize: 10,
+           timestamp: Date.now()
+         });
+       }
+    }
 
-    if (history.length > 2) {
-      const oldestNodeIdToClose = history.shift();
-      const nodeToClose = params.api.getRowNode(oldestNodeIdToClose!);
-      
-      if (nodeToClose && nodeToClose.expanded) {
-        params.api.setRowNodeExpanded(nodeToClose, false);
+    // Apply the "250 Document" cap logic instead of the hard '2 nodes' limit
+    this.enforceDocumentLimit();
+  }
+
+  private enforceDocumentLimit(): void {
+    let totalDocs = this.expandedNodesHistory.reduce((sum, n) => sum + n.pageSize, 0);
+
+    // If we're under the limit, do nothing
+    if (totalDocs <= this.MAX_TOTAL_DOCUMENTS) {
+      return;
+    }
+
+    // Sort by oldest first
+    this.expandedNodesHistory.sort((a, b) => a.timestamp - b.timestamp);
+
+    for (let i = 0; i < this.expandedNodesHistory.length; i++) {
+      const node = this.expandedNodesHistory[i];
+      const api = node.isLeft ? this.leftGridApi : this.rightGridApi;
+
+      if (!api) continue;
+
+      // Try shrinking to 10
+      if (node.pageSize > 10) {
+        const reduction = node.pageSize - 10;
+        node.pageSize = 10;
+        totalDocs -= reduction;
+        
+        // Push the change to the grid via datasource
+        this.currentDatasource?.changePageSize?.(node.route, 10, api);
+
+        if (totalDocs <= this.MAX_TOTAL_DOCUMENTS) return; // Mission accomplished
+      }
+
+      // If still over limit, shrink to MIN_PAGE_SIZE (5)
+      if (node.pageSize > this.MIN_PAGE_SIZE) {
+        const reduction = node.pageSize - this.MIN_PAGE_SIZE;
+        node.pageSize = this.MIN_PAGE_SIZE;
+        totalDocs -= reduction;
+
+        this.currentDatasource?.changePageSize?.(node.route, this.MIN_PAGE_SIZE, api);
+
+        if (totalDocs <= this.MAX_TOTAL_DOCUMENTS) return; // Mission accomplished
       }
     }
+
+    // If STILL over limit (e.g. 51 nodes open at size 5 = 255 docs), start closing the oldest ones entirely
+    while (totalDocs > this.MAX_TOTAL_DOCUMENTS && this.expandedNodesHistory.length > 0) {
+      const oldestNode = this.expandedNodesHistory.shift()!;
+      const api = oldestNode.isLeft ? this.leftGridApi : this.rightGridApi;
+      
+      if (api) {
+        const rowNode = api.getRowNode(oldestNode.id);
+        if (rowNode && rowNode.expanded) {
+          api.setRowNodeExpanded(rowNode, false);
+        }
+      }
+      
+      // Also remove from the specific side's tracker so our histories stay in sync
+      const history = oldestNode.isLeft ? this.recentlyExpandedNodesLeft : this.recentlyExpandedNodesRight;
+      const idx = history.indexOf(oldestNode.id);
+      if (idx > -1) history.splice(idx, 1);
+      
+      totalDocs -= oldestNode.pageSize;
+    }
   }
+
+  public changePageSizeSubcategory = (route: string[], size: number, api?: GridApi) => {
+    if (this.currentDatasource && this.currentDatasource.changePageSize && api) {
+      const isLeft = api === this.leftGridApi;
+      const category = route[route.length - 2];
+      const subcategory = route[route.length - 1];
+      
+      // Update our global tracking when a user interacts with the pagination UI
+      const id = `subcategory|${category}|${subcategory}`;
+      const trackerNode = this.expandedNodesHistory.find(n => n.id === id && n.isLeft === isLeft);
+      if (trackerNode) {
+        trackerNode.pageSize = size;
+        trackerNode.timestamp = Date.now(); // bump it to 'newest' since they just interacted with it
+      }
+      
+      api.forEachNode(node => {
+        if (node.data?.category === category && node.data?.subcategory === subcategory && node.data?.rowType === 'document') {
+          node.data['isLoading'] = true;
+        }
+      });
+      api.refreshCells({ force: true });
+
+      this.currentDatasource.changePageSize(route, size, api);
+      
+      // Enforce limits immediately after changing size
+      this.enforceDocumentLimit();
+    }
+  };
 
   runSearch(): void {
     const searchText = this.searchControl.value.trim();
