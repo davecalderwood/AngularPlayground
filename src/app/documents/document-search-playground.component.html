@@ -36,8 +36,12 @@
         {{ isSplitView ? 'Close Split View' : 'Split View' }}
       </button>
 
-      <label class="group-section-toggle">
-        <input type="checkbox" [checked]="isGroupedBySection" (change)="toggleSectionGroup()" /> Group by Section
+      <label class="grouping-select">
+        Grouping:
+        <select [formControl]="groupingControl" (change)="onGroupingChange()">
+          <option value="category">Category > Subcategory</option>
+          <option value="section">Section > Category > Subcategory</option>
+        </select>
       </label>
     </div>
 

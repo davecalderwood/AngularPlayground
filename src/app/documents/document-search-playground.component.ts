@@ -47,6 +47,7 @@ interface ExpandedNode {
 })
 export class DocumentSearchPlaygroundComponent {
   searchControl = new FormControl<string>('', { nonNullable: true });
+  groupingControl = new FormControl<string>('category', { nonNullable: true });
 
   private leftGridApi?: GridApi<DocumentTreeRow>;
   private rightGridApi?: GridApi<DocumentTreeRow>;
@@ -88,11 +89,32 @@ export class DocumentSearchPlaygroundComponent {
     }
   }
 
+  onGroupingChange(): void {
+    const value = this.groupingControl.value;
+    this.isGroupedBySection = value === 'section';
+    this.applyGroupingToApi(this.leftGridApi);
+    this.applyGroupingToApi(this.rightGridApi);
+    
+    if (this.searchControl.value.trim()) {
+       this.runSearch();
+    }
+  }
+
   toggleSectionGroup(): void {
     this.isGroupedBySection = !this.isGroupedBySection;
+    this.groupingControl.setValue(this.isGroupedBySection ? 'section' : 'category');
     
-    const applyToApi = (api?: GridApi) => {
-      if (api) {
+    this.applyGroupingToApi(this.leftGridApi);
+    this.applyGroupingToApi(this.rightGridApi);
+    
+    // Trigger a fresh search to rebuild tree if necessary
+    if (this.searchControl.value.trim()) {
+       this.runSearch();
+    }
+  }
+
+  private applyGroupingToApi(api?: GridApi): void {
+     if (api) {
         if (this.isGroupedBySection) {
           api.applyColumnState({
             state: [
@@ -111,15 +133,6 @@ export class DocumentSearchPlaygroundComponent {
           });
         }
       }
-    };
-    
-    applyToApi(this.leftGridApi);
-    applyToApi(this.rightGridApi);
-    
-    // Trigger a fresh search to rebuild tree if necessary
-    if (this.searchControl.value.trim()) {
-       this.runSearch();
-    }
   }
 
   columnDefs: ColDef<DocumentTreeRow>[] = [
