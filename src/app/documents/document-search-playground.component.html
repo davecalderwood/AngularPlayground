@@ -1,3 +1,19 @@
+<button
+  type="button"
+  class="advanced-search-button"
+  (click)="openAdvancedSearch()"
+>
+  Advanced search
+</button>
+
+<app-document-query-builder
+  *ngIf="showAdvancedSearch"
+  [fields]="advancedSearchFields"
+  baseQuery="Deleted: 0"
+  (closed)="closeAdvancedSearch()"
+  (search)="runAdvancedSearch($event)"
+></app-document-query-builder>
+
 <div class="document-search-page">
   <div class="search-panel">
     <label for="documentSearch">Document Search</label>

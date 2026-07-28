@@ -1,0 +1,123 @@
+<div class="query-modal-backdrop" (mousedown)="close()">
+  <section
+    class="query-modal"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title"
+    (mousedown)="$event.stopPropagation()"
+  >
+    <header class="modal-header">
+      <div>
+        <p class="eyebrow">Document jobs</p>
+        <h2>{{ title }}</h2>
+        <p class="subtitle">Build grouped AND/OR rules without typing query syntax.</p>
+      </div>
+      <button type="button" class="icon-button" aria-label="Close" (click)="close()">×</button>
+    </header>
+
+    <main class="modal-body">
+      <ng-container
+        *ngTemplateOutlet="groupTemplate; context: { group: root, depth: 0, parent: null, index: -1 }"
+      ></ng-container>
+
+      <section class="query-preview" aria-live="polite">
+        <div class="preview-heading">
+          <span>Backend query preview</span>
+          <span class="valid-badge" [class.invalid]="!canSearch">
+            {{ canSearch ? 'Ready' : 'Add a complete rule' }}
+          </span>
+        </div>
+        <code>{{ preview || 'No query yet' }}</code>
+      </section>
+    </main>
+
+    <footer class="modal-footer">
+      <button type="button" class="button button-secondary" (click)="clearAll()">Clear</button>
+      <div class="footer-actions">
+        <button type="button" class="button button-ghost" (click)="close()">Cancel</button>
+        <button type="button" class="button button-primary" [disabled]="!canSearch" (click)="submit()">
+          Run document job
+        </button>
+      </div>
+    </footer>
+  </section>
+</div>
+
+<ng-template #groupTemplate let-group="group" let-depth="depth" let-parent="parent" let-index="index">
+  <section class="query-group" [class.nested]="depth > 0">
+    <div class="group-toolbar">
+      <div class="join-control" [formGroup]="group">
+        <span>Match</span>
+        <select formControlName="join" aria-label="Group join operator">
+          <option value="AND">AND</option>
+          <option value="OR">OR</option>
+        </select>
+      </div>
+
+      <div class="group-actions">
+        <button type="button" class="mini-button" (click)="addRule(group)">+ Rule</button>
+        <button type="button" class="mini-button" (click)="addGroup(group)">+ Group</button>
+        <button
+          *ngIf="parent"
+          type="button"
+          class="mini-button danger"
+          (click)="removeChild(parent, index)"
+        >
+          Remove group
+        </button>
+      </div>
+    </div>
+
+    <div class="group-children">
+      <ng-container *ngFor="let child of group.controls.children.controls; let i = index; trackBy: trackByIndex">
+        <ng-container *ngIf="isGroup(child); else ruleTemplate">
+          <ng-container
+            *ngTemplateOutlet="groupTemplate; context: { group: asGroup(child), depth: depth + 1, parent: group, index: i }"
+          ></ng-container>
+        </ng-container>
+
+        <ng-template #ruleTemplate>
+          <div class="query-rule" [formGroup]="asRule(child)">
+            <span class="rule-number">{{ i + 1 }}</span>
+
+            <label>
+              <span>Field</span>
+              <select formControlName="field">
+                <option *ngFor="let field of fields" [value]="field.key">{{ field.label }}</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Condition</span>
+              <select formControlName="operator">
+                <option *ngFor="let operator of operatorsFor(asRule(child))" [value]="operator">
+                  {{ operatorLabels[operator] }}
+                </option>
+              </select>
+            </label>
+
+            <label class="value-field" [class.disabled]="!needsValue(asRule(child))">
+              <span>Value</span>
+              <input
+                type="text"
+                formControlName="value"
+                [placeholder]="placeholderFor(asRule(child))"
+                [disabled]="!needsValue(asRule(child))"
+                (keydown.enter)="submit()"
+              />
+            </label>
+
+            <button
+              type="button"
+              class="remove-rule"
+              aria-label="Remove rule"
+              (click)="removeChild(group, i)"
+            >
+              ×
+            </button>
+          </div>
+        </ng-template>
+      </ng-container>
+    </div>
+  </section>
+</ng-template>
