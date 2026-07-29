@@ -167,12 +167,37 @@ export class DocumentSearchPlaygroundComponent {
 
   onGroupingChange(): void {
     const value = this.groupingControl.value;
-    this.isGroupedBySection = value === 'section';
+    this.isGroupedBySection = value === 'section' || value === 'sectionOnly';
+    
+    // We update the datasource configuration so data renders with proper levels
+    let configLevels = [];
+    if (value === 'sectionOnly') {
+      configLevels = [
+        { key: 'section', label: 'Section', backendColumn: 'section_desc' }
+      ];
+    } else if (value === 'section') {
+       configLevels = [
+        { key: 'section', label: 'Section', backendColumn: 'section_desc' },
+        { key: 'category', label: 'Category', backendColumn: 'category_desc' },
+        { key: 'subcategory', label: 'Subcategory', backendColumn: 'subcategory_desc' }
+      ];
+    } else {
+       configLevels = [
+        { key: 'category', label: 'Category', backendColumn: 'category_desc' },
+        { key: 'subcategory', label: 'Subcategory', backendColumn: 'subcategory_desc' }
+      ];
+    }
+    
+    // Apply configuration and column states
     this.applyGroupingToApi(this.leftGridApi);
     this.applyGroupingToApi(this.rightGridApi);
 
-    if (this.searchControl.value.trim()) {
-      this.runSearch();
+    // Because the hierarchy config changed, we need to rebuild the datasource if we have a summary
+    if (this.currentDatasource && this.pendingJobId && this.pendingSummary || this.currentDatasource) {
+        // Need to run search again if the grouping drops levels so the tree restarts
+       if (this.searchControl.value.trim()) {
+           this.runSearch();
+       }
     }
   }
 
@@ -193,7 +218,15 @@ export class DocumentSearchPlaygroundComponent {
 
   private applyGroupingToApi(api?: GridApi): void {
     if (api) {
-      if (this.isGroupedBySection) {
+      if (this.groupingControl.value === 'sectionOnly') {
+        api.applyColumnState({
+          state: [
+            { colId: 'section', rowGroupIndex: 0 },
+            { colId: 'category', rowGroupIndex: null },
+            { colId: 'subcategory', rowGroupIndex: null },
+          ],
+        });
+      } else if (this.groupingControl.value === 'section') {
         api.applyColumnState({
           state: [
             { colId: 'section', rowGroupIndex: 0 },
@@ -628,7 +661,29 @@ export class DocumentSearchPlaygroundComponent {
       return;
     }
 
-    this.currentDatasource = this.datasourceFactory.create(summary, jobId);
+    const value = this.groupingControl.value;
+    let configLevels = [];
+    if (value === 'sectionOnly') {
+      configLevels = [
+        { key: 'section', label: 'Section', backendColumn: 'section_desc' }
+      ];
+    } else if (value === 'section') {
+       configLevels = [
+        { key: 'section', label: 'Section', backendColumn: 'section_desc' },
+        { key: 'category', label: 'Category', backendColumn: 'category_desc' },
+        { key: 'subcategory', label: 'Subcategory', backendColumn: 'subcategory_desc' }
+      ];
+    } else {
+       configLevels = [
+        { key: 'category', label: 'Category', backendColumn: 'category_desc' },
+        { key: 'subcategory', label: 'Subcategory', backendColumn: 'subcategory_desc' }
+      ];
+    }
+
+    this.currentDatasource = this.datasourceFactory.create(summary, jobId, {
+      levels: configLevels,
+      defaultPageSize: 10
+    });
 
     this.leftGridApi.setGridOption(
       'serverSideDatasource',
@@ -680,7 +735,7 @@ export class DocumentSearchPlaygroundComponent {
 
     topLevelRows.forEach((row) => {
       const categoryName = String(row.desc);
-      const section = this.determineSection(categoryName);
+      const section = row.section_desc;
 
       categoryMap.set(categoryName, {
         category: categoryName,
@@ -698,7 +753,8 @@ export class DocumentSearchPlaygroundComponent {
       let category = categoryMap.get(categoryName);
 
       if (!category) {
-        const section = this.determineSection(categoryName);
+        // Find the first row that has a section to inherit from
+        const section = rows.length > 0 ? rows[0].section_desc : 'Unknown';
         category = {
           category: categoryName,
           section,
@@ -715,7 +771,7 @@ export class DocumentSearchPlaygroundComponent {
 
           category: categoryName,
           subcategory: row.desc,
-          section: category.section,
+          section: row.section_desc || category.section,
           documentCount: row.count ?? 0,
         });
       });
@@ -730,16 +786,6 @@ export class DocumentSearchPlaygroundComponent {
     return {
       categories: Array.from(categoryMap.values()),
     };
-  }
-
-  private determineSection(categoryName: string): string {
-    if (categoryName === 'Finance' || categoryName === 'Legal') {
-      return 'Section A';
-    }
-    if (categoryName === 'Management' || categoryName === 'Human Resources') {
-      return 'Section B';
-    }
-    return 'Section C';
   }
 
   openAdvancedSearch(): void {

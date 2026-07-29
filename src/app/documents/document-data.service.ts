@@ -19,11 +19,27 @@ export class DocumentDataService {
       body: request
     });
 
-    const subcategory = this.extractSubcategoryFromFilter(request.filter_by);
+    let rows = this.fakeDocuments;
 
-    let rows = this.fakeDocuments.filter(document =>
-      document.subcategory_desc === subcategory
-    );
+    if (request.filter_by) {
+        // Evaluate the raw sql filter string directly since it is dynamically built based on configs
+        const safeFilter = request.filter_by
+             .replace('WHERE', '')
+             .trim()
+             .split(' AND ');
+
+        for (const condition of safeFilter) {
+            const match = /([a-zA-Z_]+)\s*=\s*'([^']+)'/i.exec(condition);
+            if (match) {
+                const column = match[1];
+                let value = match[2];
+                // basic unescape
+                value = value.replace(/''/g, "'");
+
+                rows = rows.filter(document => document[column] === value);
+            }
+        }
+    }
 
     rows = this.applySort(rows, request.order_by);
 
@@ -33,12 +49,6 @@ export class DocumentDataService {
     );
 
     return of(pagedRows).pipe(delay(400));
-  }
-
-  private extractSubcategoryFromFilter(filterBy: string): string {
-    const match = /subcategory_desc\s*=\s*'([^']+)'/i.exec(filterBy);
-
-    return match?.[1] ?? '';
   }
 
   private applySort(
@@ -70,21 +80,25 @@ export class DocumentDataService {
     const categories = [
       {
         categoryId: 1,
+        section: 'Section B',
         category: 'Management',
         subcategories: ['Policies', 'Reports', 'Procedures']
       },
       {
         categoryId: 2,
+        section: 'Section A',
         category: 'Finance',
         subcategories: ['Payroll', 'Invoices', 'Budgets']
       },
       {
         categoryId: 3,
+        section: 'Section B',
         category: 'Human Resources',
         subcategories: ['Employees', 'Benefits']
       },
       {
         categoryId: 4,
+        section: 'Section A',
         category: 'Legal',
         subcategories: ['Contracts', 'Compliance']
       }
@@ -102,6 +116,7 @@ export class DocumentDataService {
             category: category.categoryId,
             id,
             name: `${subcategory} Document ${i}`,
+            section_desc: category.section,
             category_desc: category.category,
             subcategory_desc: subcategory,
             type: i % 2 === 0 ? 'PDF' : 'DOCX',

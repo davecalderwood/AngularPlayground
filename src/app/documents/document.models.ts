@@ -1,3 +1,29 @@
+export interface TreeLevelDefinition {
+  key: string;
+  label: string;
+  backendColumn: string;
+}
+
+export interface DocumentTreeConfiguration {
+  levels: TreeLevelDefinition[];
+  defaultPageSize: number;
+}
+
+export interface DocumentTreeNode {
+  id: string;
+  name: string;
+  
+  levelKey: string;
+  levelIndex: number;
+  value: string;
+  
+  documentCount: number;
+  
+  pathValues: Record<string, string>;
+  
+  children: DocumentTreeNode[];
+}
+
 export interface DocumentSearchRequest {
   Querytext: string;
 }
@@ -5,6 +31,7 @@ export interface DocumentSearchRequest {
 export type DocumentJobStatus = 'processing' | 'done';
 
 export interface DocumentCategoryCounts {
+  section_desc: string;
   parent_desc: string | null;
   desc: string;
   count: number;
@@ -76,6 +103,7 @@ export interface PaginatedTableSet {
   category: number;
   id: number;
   name: string;
+  section_desc: string;
   category_desc: string;
   subcategory_desc: string;
   type: string;

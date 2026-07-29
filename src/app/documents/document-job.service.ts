@@ -47,28 +47,28 @@ export class DocumentJobService {
 
     const response: DocumentCategoryCountsResponse = {
       Unassigned: [
-        { parent_desc: null, desc: 'Management', count: 0 },
-        { parent_desc: null, desc: 'Finance', count: 0 },
-        { parent_desc: null, desc: 'Human Resources', count: 0 },
-        { parent_desc: null, desc: 'Legal', count: 0 }
+        { section_desc: 'Section B', parent_desc: null, desc: 'Management', count: 0 },
+        { section_desc: 'Section A', parent_desc: null, desc: 'Finance', count: 0 },
+        { section_desc: 'Section B', parent_desc: null, desc: 'Human Resources', count: 0 },
+        { section_desc: 'Section A', parent_desc: null, desc: 'Legal', count: 0 }
       ],
       Management: [
-        { parent_desc: 'Management', desc: 'Policies', count: 125 },
-        { parent_desc: 'Management', desc: 'Reports', count: 80 },
-        { parent_desc: 'Management', desc: 'Procedures', count: 45 }
+        { section_desc: 'Section B', parent_desc: 'Management', desc: 'Policies', count: 125 },
+        { section_desc: 'Section B', parent_desc: 'Management', desc: 'Reports', count: 80 },
+        { section_desc: 'Section B', parent_desc: 'Management', desc: 'Procedures', count: 45 }
       ],
       Finance: [
-        { parent_desc: 'Finance', desc: 'Payroll', count: 150 },
-        { parent_desc: 'Finance', desc: 'Invoices', count: 90 },
-        { parent_desc: 'Finance', desc: 'Budgets', count: 60 }
+        { section_desc: 'Section A', parent_desc: 'Finance', desc: 'Payroll', count: 150 },
+        { section_desc: 'Section A', parent_desc: 'Finance', desc: 'Invoices', count: 90 },
+        { section_desc: 'Section A', parent_desc: 'Finance', desc: 'Budgets', count: 60 }
       ],
       'Human Resources': [
-        { parent_desc: 'Human Resources', desc: 'Employees', count: 110 },
-        { parent_desc: 'Human Resources', desc: 'Benefits', count: 70 }
+        { section_desc: 'Section B', parent_desc: 'Human Resources', desc: 'Employees', count: 110 },
+        { section_desc: 'Section B', parent_desc: 'Human Resources', desc: 'Benefits', count: 70 }
       ],
       Legal: [
-        { parent_desc: 'Legal', desc: 'Contracts', count: 130 },
-        { parent_desc: 'Legal', desc: 'Compliance', count: 40 }
+        { section_desc: 'Section A', parent_desc: 'Legal', desc: 'Contracts', count: 130 },
+        { section_desc: 'Section A', parent_desc: 'Legal', desc: 'Compliance', count: 40 }
       ]
     };
 
