@@ -112,6 +112,11 @@ export class DocumentDataService {
         const count = this.getFakeCount(subcategory);
 
         for (let i = 1; i <= count; i++) {
+          let date = `2026-07-${String((i % 28) + 1).padStart(2, '0')}`;
+          if (category.category === 'Legal' && subcategory === 'Compliance' && i < 10) {
+              date = `2020-01-0${i}`;
+          }
+
           documents.push({
             category: category.categoryId,
             id,
@@ -122,7 +127,7 @@ export class DocumentDataService {
             type: i % 2 === 0 ? 'PDF' : 'DOCX',
             status: i % 3 === 0 ? 'Archived' : 'Ready',
             author: i % 2 === 0 ? 'Jane Smith' : 'David Calderwood',
-            created_date: `2026-07-${String((i % 28) + 1).padStart(2, '0')}`
+            created_date: date
           });
 
           id++;
@@ -141,7 +146,7 @@ export class DocumentDataService {
       Payroll: 150,
       Invoices: 90,
       Budgets: 60,
-      Employees: 110,
+      Employees: 1200,
       Benefits: 70,
       Contracts: 130,
       Compliance: 40

@@ -63,7 +63,7 @@ export class DocumentJobService {
         { section_desc: 'Section A', parent_desc: 'Finance', desc: 'Budgets', count: 60 }
       ],
       'Human Resources': [
-        { section_desc: 'Section B', parent_desc: 'Human Resources', desc: 'Employees', count: 110 },
+        { section_desc: 'Section B', parent_desc: 'Human Resources', desc: 'Employees', count: 1200 },
         { section_desc: 'Section B', parent_desc: 'Human Resources', desc: 'Benefits', count: 70 }
       ],
       Legal: [
