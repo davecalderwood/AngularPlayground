@@ -1,0 +1,53 @@
+<section class="bug-report-form-shell">
+  <header class="header">
+    <p class="eyebrow">Bug Reporting</p>
+    <h1>Bug Report Form</h1>
+    <p class="intro">
+      Local-only prototype form. Submitting logs a diagnostic payload to the console and does not call HTTP.
+    </p>
+  </header>
+
+  <form class="form-card" [formGroup]="form" (ngSubmit)="sendBug()">
+    <mat-form-field appearance="outline">
+      <mat-label>Title</mat-label>
+      <input matInput formControlName="title" placeholder="Brief summary" />
+      <mat-error *ngIf="form.controls.title.touched && form.controls.title.hasError('required')">
+        Title is required.
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Category</mat-label>
+      <mat-select formControlName="category">
+        <mat-option *ngFor="let category of categories" [value]="category">{{ category }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Description</mat-label>
+      <textarea matInput rows="5" formControlName="description" placeholder="What happened?"></textarea>
+      <mat-error *ngIf="form.controls.description.touched && form.controls.description.hasError('required')">
+        Description is required.
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Optional Expected Behavior</mat-label>
+      <textarea matInput rows="4" formControlName="expectedBehavior" placeholder="What did you expect?"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Console Output</mat-label>
+      <mat-select formControlName="outputFormat">
+        <mat-option *ngFor="let format of outputFormats" [value]="format">{{ format }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="actions">
+      <button mat-button type="button" data-bug-action="CLOSE_MODAL" (click)="cancel()">Cancel</button>
+      <button mat-flat-button color="primary" type="submit" data-bug-action="SUBMIT_FORM">
+        Send Bug
+      </button>
+    </div>
+  </form>
+</section>

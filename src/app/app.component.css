@@ -20,6 +20,20 @@
   font-weight: 500;
 }
 
+.app-header nav a.header-button {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px solid #2e5b99;
+  border-radius: 8px;
+  color: #2e5b99;
+  background: #fff;
+}
+
+.app-header nav a.header-button.active {
+  color: #fff;
+  background: #2e5b99;
+}
+
 .app-header nav a.active {
   color: #2e5b99;
   font-weight: bold;

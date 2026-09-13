@@ -1,0 +1,155 @@
+<section class="demo-shell">
+  <header class="demo-header">
+    <p class="eyebrow">Bug Reporting Prototype</p>
+    <h1>Diagnostic Demo</h1>
+    <p class="intro">
+      Demo-only controls for generating safe diagnostic events. No real API traffic is sent.
+    </p>
+  </header>
+
+  <section class="panel">
+    <h2>User activity</h2>
+    <div class="button-grid">
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        data-bug-action="OPEN_CALENDAR"
+        (click)="openCalendar($event)"
+      >
+        Open Calendar
+      </button>
+
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        data-bug-action="OPEN_USER"
+        (click)="openUser($event)"
+      >
+        Open User
+      </button>
+
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        data-bug-action="OPEN_MODAL"
+        (click)="openEditAddressModal($event)"
+      >
+        Open Edit Address Modal
+      </button>
+
+      <button
+        mat-raised-button
+        color="primary"
+        type="button"
+        data-bug-action="SAVE_ADDRESS"
+        (click)="saveAddress($event)"
+      >
+        Save Address
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>API simulations</h2>
+    <div class="button-grid">
+      <button
+        mat-stroked-button
+        type="button"
+        data-bug-action="SEARCH"
+        (click)="runSuccessfulApiRequest($event)"
+      >
+        Successful API Request
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        data-bug-action="NEXT_PAGE"
+        (click)="run404ApiRequest($event)"
+      >
+        404 API Request
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        data-bug-action="SUBMIT_FORM"
+        (click)="run400ApiRequest($event)"
+      >
+        400 API Request
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        data-bug-action="SUBMIT_FORM"
+        (click)="run500ApiRequest($event)"
+      >
+        500 API Request
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        data-bug-action="OPEN_CALENDAR"
+        (click)="runSlowApiRequest($event)"
+      >
+        Slow API Request
+      </button>
+
+      <button
+        mat-stroked-button
+        type="button"
+        data-bug-action="SUBMIT_FORM"
+        (click)="runRepeatFailedRequest($event)"
+      >
+        Repeat Failed Request
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Diagnostics</h2>
+    <div class="button-grid">
+      <button
+        mat-flat-button
+        color="accent"
+        type="button"
+        data-bug-action="REPORT_BUG"
+        (click)="openReportBugDialog($event)"
+      >
+        Report Bug
+      </button>
+
+      <button
+        mat-flat-button
+        color="warn"
+        type="button"
+        data-bug-action="OPEN_MODAL"
+        (click)="generateUiError($event)"
+      >
+        Generate UI Error
+      </button>
+
+      <button
+        mat-button
+        type="button"
+        (click)="clearDiagnostics($event)"
+      >
+        Clear Diagnostics
+      </button>
+    </div>
+  </section>
+
+  <section class="panel debug-panel">
+    <div class="debug-header">
+      <h2>Current diagnostic timeline</h2>
+      <p>Formatted JSON for quick verification.</p>
+    </div>
+
+    <pre>{{ diagnosticTimelineJson }}</pre>
+  </section>
+</section>

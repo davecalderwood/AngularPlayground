@@ -5,6 +5,13 @@ import { DocumentsComponent } from './documents/documents.component';
 export const routes: Routes = [
   { path: 'calendar', component: CalendarComponent },
   { path: 'documents', component: DocumentsComponent },
+  {
+    path: 'bug-report-demo',
+    loadComponent: () =>
+      import('./bug-reporting/bug-report-demo/bug-report-demo.component').then(
+        m => m.BugReportDemoComponent
+      )
+  },
   { 
     path: 'document-search-v2', 
     loadComponent: () => import('./document-search-v2/components/document-search-v2.component').then(m => m.DocumentSearchV2Component) 
