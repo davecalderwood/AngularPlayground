@@ -16,5 +16,10 @@ export const routes: Routes = [
     path: 'document-search-v2', 
     loadComponent: () => import('./document-search-v2/components/document-search-v2.component').then(m => m.DocumentSearchV2Component) 
   },
+  {
+    path: 'us-regional-map',
+    loadComponent: () =>
+      import('./us-regional-map-demo/us-regional-map-demo.component').then(m => m.UsRegionalMapDemoComponent)
+  },
   { path: '', redirectTo: '/calendar', pathMatch: 'full' },
 ];

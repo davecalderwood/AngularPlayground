@@ -1,0 +1,21 @@
+:host { display: block; }
+.us-map__svg { width: 100%; height: auto; max-width: 720px; }
+/* D3-created elements don't receive Angular's scoped attributes. */
+:host ::ng-deep .us-map__state { cursor: pointer; stroke: #fff; stroke-width: 0.75; transition: opacity 0.15s; outline: none; }
+:host ::ng-deep .us-map__state--dimmed { opacity: 0.3; }
+:host ::ng-deep .us-map__state:focus-visible,
+:host ::ng-deep .us-map__state--selected { stroke: #222; stroke-width: 1.5; }
+:host ::ng-deep .us-map__labels,
+:host ::ng-deep .us-map__label,
+:host ::ng-deep .us-map__leader { pointer-events: none; }
+:host ::ng-deep .us-map__label { font: 600 10px sans-serif; fill: #222; stroke: #fff; stroke-width: 2.5px; paint-order: stroke; user-select: none; transition: opacity 0.15s; }
+:host ::ng-deep .us-map__label--callout { font-size: 9px; }
+:host ::ng-deep .us-map__label--dimmed { opacity: 0.3; }
+:host ::ng-deep .us-map__leader { stroke: #666; stroke-width: 0.75; }
+.us-map__status { font: 14px sans-serif; color: #555; }
+.us-map__status--error { color: #b00020; }
+.us-map__legend { display: flex; flex-wrap: wrap; gap: 12px; list-style: none; margin: 12px 0 0; padding: 0; }
+.us-map__legend-item { display: flex; align-items: center; gap: 6px; cursor: pointer; font: 14px sans-serif; }
+.us-map__legend-item--selected { font-weight: 700; }
+.us-map__swatch { width: 14px; height: 14px; border-radius: 3px; }
+

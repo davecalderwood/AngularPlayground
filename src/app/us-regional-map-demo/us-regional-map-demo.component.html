@@ -1,0 +1,21 @@
+<section class="demo">
+  <h2>US Regional Map</h2>
+
+  <div class="demo__controls">
+    <button type="button" (click)="randomizeAll()">Randomize all states</button>
+    <button type="button" (click)="addRandomStates()">Add 5 random states</button>
+    <button type="button" *ngFor="let r of regions" (click)="colorRegion(r.id)">Color {{ r.name }}</button>
+    <button type="button" (click)="clear()">Clear</button>
+  </div>
+
+  <p class="demo__status">
+    Color updates sent: {{ updateCount }} · Colored states: {{ (stateColors | keyvalue).length }} ·
+    Selected region: {{ selectedRegionId ?? 'none' }} · Last click: {{ lastClick ?? 'none' }}
+  </p>
+
+  <us-regional-map
+    [stateColors]="stateColors"
+    [(selectedRegionId)]="selectedRegionId"
+    (stateClick)="lastClick = $event"
+  ></us-regional-map>
+</section>

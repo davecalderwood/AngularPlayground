@@ -1,0 +1,21 @@
+<div class="us-map">
+  <svg #svg class="us-map__svg" role="group" aria-label="United States regional map"></svg>
+  <p class="us-map__status" *ngIf="loading">Loading map…</p>
+  <p class="us-map__status us-map__status--error" *ngIf="error">{{ error }}</p>
+
+  <ul class="us-map__legend" *ngIf="showLegend">
+    <li
+      *ngFor="let region of regions; trackBy: trackByRegion"
+      class="us-map__legend-item"
+      [class.us-map__legend-item--selected]="region.id === selectedRegionId"
+      tabindex="0"
+      (click)="toggleRegion(region.id)"
+      (keydown.enter)="toggleRegion(region.id)"
+      (mouseenter)="setHover(region.id)"
+      (mouseleave)="setHover(null)"
+    >
+      <span class="us-map__swatch" [style.background]="region.color"></span>
+      {{ region.name }}
+    </li>
+  </ul>
+</div>
