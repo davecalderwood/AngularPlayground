@@ -1,0 +1,95 @@
+<div class="grouped-data-browser">
+  <div class="search-bar" *ngIf="config.search?.enabled">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search</mat-label>
+      <input
+        matInput
+        [(ngModel)]="searchText"
+        [placeholder]="searchPlaceholder"
+        (keyup.enter)="submitSearch()">
+      <button mat-icon-button matSuffix type="button" aria-label="Search" (click)="submitSearch()">
+        <mat-icon>search</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
+
+  <div *ngIf="searching" class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Searching...</span>
+  </div>
+
+  <div class="results-container" *ngIf="!searching">
+    <div class="tree-panel" *ngIf="config.navigation.enabled">
+      <mat-tree
+        [dataSource]="navigationNodes"
+        [childrenAccessor]="childrenAccessor"
+        [attr.aria-label]="config.navigation.rootLabel || 'Groups'"
+        class="navigation-tree">
+      <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+        <button
+          class="node-content leaf-node-content"
+          type="button"
+          [class.active-filter]="isNodeSelected(node.id)"
+          [class.highlighted-filter]="isNodeHighlighted(node.id)"
+          [attr.aria-current]="isNodeSelected(node.id) ? 'true' : null"
+          (click)="selectNode(node.id)">
+          <span class="node-name">{{ node.label }}</span>
+          <span class="node-count" *ngIf="config.navigation.showCounts">({{ node.count }})</span>
+        </button>
+      </mat-tree-node>
+
+      <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
+        <div class="mat-tree-node-group">
+          <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.label">
+            <mat-icon class="mat-icon-rtl-mirror">chevron_right</mat-icon>
+          </button>
+          <button
+            class="node-content"
+            type="button"
+            [class.active-filter]="isNodeSelected(node.id)"
+            [class.highlighted-filter]="isNodeHighlighted(node.id)"
+            [attr.aria-current]="isNodeSelected(node.id) ? 'true' : null"
+            (click)="selectNode(node.id)">
+            <span class="node-name">{{ node.label }}</span>
+            <span class="node-count" *ngIf="config.navigation.showCounts">({{ node.count }})</span>
+          </button>
+        </div>
+      </mat-tree-node>
+      </mat-tree>
+    </div>
+
+    <div class="content-panel">
+      <div class="grid-controls" *ngIf="config.pagination.enabled">
+        <span class="pagination-info">{{ pageSummary }}</span>
+        <div class="buttons">
+          <button mat-button type="button" (click)="previousPage()" [disabled]="currentPage === 0 || loading">
+            Previous
+          </button>
+          <button mat-button type="button" (click)="nextPage()" [disabled]="currentPage + 1 >= pageCount || loading">
+            Next
+          </button>
+        </div>
+      </div>
+
+      <div class="grid-wrapper">
+      <ag-grid-angular
+        class="ag-theme-alpine data-grid"
+        [gridOptions]="gridOptionsForGrid"
+        [components]="gridComponents"
+        [rowData]="rows"
+        [columnDefs]="columnDefinitions"
+        [suppressPaginationPanel]="true"
+        (sortChanged)="onGridSortChanged($event)">
+      </ag-grid-angular>
+
+      <div class="grid-overlay" *ngIf="loading" aria-live="polite">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Loading Page...</span>
+      </div>
+      <div class="empty-state" *ngIf="!loading && rows.length === 0">
+        {{ config.emptyMessage || 'No rows to display.' }}
+      </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<section class="search-container">
+  <h2>Employee Search</h2>
+
+  <div class="search-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search Employees</mat-label>
+      <input
+        matInput
+        [(ngModel)]="searchText"
+        placeholder="Enter name, role, or location..."
+        (keyup.enter)="requestSearch()">
+      <button mat-icon-button matSuffix type="button" aria-label="Search employees" (click)="requestSearch()">
+        <mat-icon>search</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
+
+  <app-grouped-data-browser
+    [config]="browserConfig"
+    [navigationNodes]="hierarchy"
+    [rows]="rows"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+    [currentPage]="currentPage"
+    [(selectedNodeId)]="selectedNodeId"
+    [searchCommand]="searchCommand"
+    (nodeSelected)="onNodeSelected($event)"
+    (pageRequested)="loadPage($event)"
+    (sortChanged)="onSortChanged($event)"
+    (searchRequested)="onBrowserSearch($event)">
+  </app-grouped-data-browser>
+</section>

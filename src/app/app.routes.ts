@@ -6,6 +6,20 @@ export const routes: Routes = [
   { path: 'calendar', component: CalendarComponent },
   { path: 'documents', component: DocumentsComponent },
   {
+    path: 'grouped-data-browser-demo',
+    loadComponent: () =>
+      import('./grouped-data-browser-demo/grouped-data-browser-demo.component').then(
+        m => m.GroupedDataBrowserDemoComponent
+      )
+  },
+  {
+    path: 'asset-catalog-demo',
+    loadComponent: () =>
+      import('./asset-catalog-demo/asset-catalog-demo.component').then(
+        m => m.AssetCatalogDemoComponent
+      )
+  },
+  {
     path: 'bug-report-demo',
     loadComponent: () =>
       import('./bug-reporting/bug-report-demo/bug-report-demo.component').then(

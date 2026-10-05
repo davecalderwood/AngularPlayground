@@ -1,0 +1,40 @@
+<section class="asset-catalog-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">OPERATIONS</p>
+      <h1>Asset catalog</h1>
+    </div>
+    <span class="record-total">{{ totalRecords }} assets</span>
+  </header>
+  <p class="action-feedback" aria-live="polite">{{ actionFeedback }}</p>
+
+  <div class="parent-search">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search assets</mat-label>
+      <input
+        matInput
+        [(ngModel)]="searchText"
+        placeholder="Name, type, site, or condition"
+        (keyup.enter)="requestSearch()">
+      <button mat-icon-button matSuffix type="button" aria-label="Search assets" (click)="requestSearch()">
+        <mat-icon>search</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
+
+  <app-grouped-data-browser
+    [config]="browserConfig"
+    [navigationNodes]="hierarchy"
+    [rows]="rows"
+    [totalRecords]="totalRecords"
+    [loading]="loading"
+    [currentPage]="currentPage"
+    [searchCommand]="searchCommand"
+    [(selectedNodeId)]="selectedNodeId"
+    (nodeSelected)="onNodeSelected($event)"
+    (pageRequested)="loadPage($event)"
+    (sortChanged)="onSortChanged($event)"
+    (rowActionRequested)="onRowAction($event)"
+    (searchRequested)="onBrowserSearch($event)">
+  </app-grouped-data-browser>
+</section>
