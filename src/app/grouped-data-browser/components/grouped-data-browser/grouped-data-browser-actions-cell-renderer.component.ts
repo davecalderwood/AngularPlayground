@@ -1,10 +1,8 @@
-import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { ICellRendererAngularComp } from 'ag-grid-angular';
 import { ICellRendererParams } from 'ag-grid-community';
 import { GroupedDataBrowserRowAction } from '../../models/grouped-data-browser-config.model';
+import { GroupedDataBrowserRowActionsComponent } from '../grouped-data-browser-row-actions/grouped-data-browser-row-actions.component';
 
 interface GroupedDataBrowserActionsCellParams extends ICellRendererParams<unknown> {
   actions: GroupedDataBrowserRowAction[];
@@ -18,24 +16,12 @@ interface GroupedDataBrowserActionsCellParams extends ICellRendererParams<unknow
 @Component({
   selector: 'app-grouped-data-browser-actions-cell',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [GroupedDataBrowserRowActionsComponent],
   template: `
-    <div class="row-actions">
-      <button
-        *ngFor="let action of actions"
-        mat-icon-button
-        type="button"
-        [attr.aria-label]="action.label"
-        [title]="action.tooltip || action.label"
-        (click)="runAction(action, $event)">
-        <mat-icon>{{ action.icon }}</mat-icon>
-      </button>
-    </div>
+    <app-grouped-data-browser-row-actions
+      [actions]="actions"
+      (actionSelected)="runAction($event)" />
   `,
-  styles: [`
-    :host { display: block; width: 100%; height: 100%; }
-    .row-actions { display: flex; align-items: center; gap: 2px; height: 100%; }
-  `],
 })
 export class GroupedDataBrowserActionsCellRendererComponent implements ICellRendererAngularComp {
   actions: GroupedDataBrowserRowAction[] = [];
@@ -50,8 +36,7 @@ export class GroupedDataBrowserActionsCellRendererComponent implements ICellRend
     return true;
   }
 
-  runAction(action: GroupedDataBrowserRowAction, event: MouseEvent): void {
-    event.stopPropagation();
+  runAction(action: GroupedDataBrowserRowAction): void {
     if (this.params.data !== undefined && this.params.data !== null) {
       this.params.onAction(action, this.params.data, this.params.node.rowIndex);
     }

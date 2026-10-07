@@ -21,6 +21,7 @@ export interface GroupedDataBrowserConfig<T> {
     defaultExpanded: boolean;
     showCounts: boolean;
     rootLabel?: string;
+    autoSelectRoot?: boolean;
   };
   pagination: {
     enabled: boolean;

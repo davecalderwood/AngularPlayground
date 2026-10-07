@@ -93,6 +93,15 @@ export class GroupedDataBrowserComponent<T> implements AfterViewInit, OnChanges 
 
     if (changes['navigationNodes']) {
       this.expandTreeIfConfigured();
+
+      if (!this.selectedNode && this.navigationNodes.length > 0 && this.config.navigation.autoSelectRoot !== false) {
+        const rootId = this.navigationNodes[0].id;
+        queueMicrotask(() => {
+          if (!this.selectedNode) {
+            this.selectNode(rootId);
+          }
+        });
+      }
     }
 
     const searchCommand = this.searchCommand;
@@ -336,7 +345,17 @@ export class GroupedDataBrowserComponent<T> implements AfterViewInit, OnChanges 
 
   private expandTreeIfConfigured(): void {
     if (this.config?.navigation.defaultExpanded) {
-      queueMicrotask(() => this.tree?.expandAll());
+      queueMicrotask(() => this.expandBranches(this.navigationNodes));
+    }
+  }
+
+  // expandAll() misses nodes that have not rendered yet, so expand by data node.
+  private expandBranches(nodes: GroupedDataNode[]): void {
+    for (const node of nodes) {
+      if (node.children?.length) {
+        this.tree?.expand(node);
+        this.expandBranches(node.children);
+      }
     }
   }
 }

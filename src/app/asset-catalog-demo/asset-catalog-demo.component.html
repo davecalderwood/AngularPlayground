@@ -22,12 +22,17 @@
     </mat-form-field>
   </div>
 
+  <p class="empty-hint" *ngIf="!searching && hierarchy.length === 0">
+    No data loaded. Run a search (leave it blank for everything) to load assets.
+  </p>
+
   <app-grouped-data-browser
     [config]="browserConfig"
     [navigationNodes]="hierarchy"
     [rows]="rows"
     [totalRecords]="totalRecords"
     [loading]="loading"
+    [searching]="searching"
     [currentPage]="currentPage"
     [searchCommand]="searchCommand"
     [(selectedNodeId)]="selectedNodeId"

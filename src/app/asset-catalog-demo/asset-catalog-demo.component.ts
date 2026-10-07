@@ -1,9 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { forkJoin, of, Subscription } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import {
   GroupedDataBrowserComponent,
   GroupedDataBrowserConfig,
@@ -13,34 +16,19 @@ import {
   GroupedDataRowActionRequest,
   GroupedDataSortRequest,
 } from '../grouped-data-browser';
-
-interface AssetRow {
-  id: string;
-  assetName: string;
-  assetType: string;
-  site: string;
-  condition: string;
-  sectionId: string;
-  categoryId: string;
-  subcategoryId: string;
-}
-
-interface AssetSection {
-  id: string;
-  label: string;
-  categories: AssetCategory[];
-}
-
-interface AssetCategory {
-  id: string;
-  label: string;
-  subcategories: Array<{ id: string; label: string }>;
-}
+import { AssetCatalogApiService } from './api/asset-catalog-api.service';
+import {
+  AssetRow,
+  mapAssetRecordToRow,
+  mapPagePlanToQueries,
+  mapTableDescToNodes,
+} from './mappers/asset-catalog.mappers';
 
 @Component({
   selector: 'app-asset-catalog-demo',
   standalone: true,
   imports: [
+    CommonModule,
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -51,7 +39,7 @@ interface AssetCategory {
   templateUrl: './asset-catalog-demo.component.html',
   styleUrl: './asset-catalog-demo.component.scss',
 })
-export class AssetCatalogDemoComponent {
+export class AssetCatalogDemoComponent implements OnDestroy {
   readonly browserConfig: GroupedDataBrowserConfig<AssetRow> = {
     pageSize: 250,
     columns: [
@@ -74,76 +62,37 @@ export class AssetCatalogDemoComponent {
       actions: [
         { id: 'flag-for-review', label: 'Flag for review', icon: 'flag' },
         { id: 'mark-for-deletion', label: 'Mark for deletion', icon: 'delete' },
+        { id: 'mark-for-deletion2', label: 'Mark for deletion', icon: 'check' },
       ],
     },
     emptyMessage: 'No assets match this selection.',
   };
 
-  private readonly sections: AssetSection[] = [
-    {
-      id: 'buildings',
-      label: 'Buildings',
-      categories: [
-        {
-          id: 'access-systems',
-          label: 'Access Systems',
-          subcategories: [{ id: 'badge-readers', label: 'Badge Readers' }],
-        },
-        {
-          id: 'climate-control',
-          label: 'Climate Control',
-          subcategories: [{ id: 'air-handlers', label: 'Air Handlers' }],
-        },
-      ],
-    },
-    {
-      id: 'fleet',
-      label: 'Fleet',
-      categories: [
-        {
-          id: 'service-vehicles',
-          label: 'Service Vehicles',
-          subcategories: [
-            { id: 'light-trucks', label: 'Light Trucks' },
-            { id: 'utility-vans', label: 'Utility Vans' },
-          ],
-        },
-        {
-          id: 'safety-equipment',
-          label: 'Safety Equipment',
-          subcategories: [{ id: 'fire-extinguishers', label: 'Fire Extinguishers' }],
-        },
-      ],
-    },
-  ];
-
-  private readonly allAssets: AssetRow[] = [
-    { id: 'a-101', assetName: 'North lobby reader', assetType: 'Card reader', site: 'North Campus', condition: 'Operational', sectionId: 'buildings', categoryId: 'access-systems', subcategoryId: 'badge-readers' },
-    { id: 'a-102', assetName: 'Loading dock reader', assetType: 'Card reader', site: 'North Campus', condition: 'Service due', sectionId: 'buildings', categoryId: 'access-systems', subcategoryId: 'badge-readers' },
-    { id: 'a-103', assetName: 'Research wing reader', assetType: 'Card reader', site: 'West Campus', condition: 'Operational', sectionId: 'buildings', categoryId: 'access-systems', subcategoryId: 'badge-readers' },
-    { id: 'a-201', assetName: 'Boiler room air handler', assetType: 'HVAC', site: 'North Campus', condition: 'Operational', sectionId: 'buildings', categoryId: 'climate-control', subcategoryId: 'air-handlers' },
-    { id: 'a-202', assetName: 'Atrium air handler', assetType: 'HVAC', site: 'West Campus', condition: 'Inspection due', sectionId: 'buildings', categoryId: 'climate-control', subcategoryId: 'air-handlers' },
-    { id: 'a-301', assetName: 'Field service truck 14', assetType: 'Pickup truck', site: 'North Depot', condition: 'Operational', sectionId: 'fleet', categoryId: 'service-vehicles', subcategoryId: 'light-trucks' },
-    { id: 'a-302', assetName: 'Field service truck 22', assetType: 'Pickup truck', site: 'West Depot', condition: 'Operational', sectionId: 'fleet', categoryId: 'service-vehicles', subcategoryId: 'light-trucks' },
-    { id: 'a-303', assetName: 'Utility van 08', assetType: 'Cargo van', site: 'North Depot', condition: 'Service due', sectionId: 'fleet', categoryId: 'service-vehicles', subcategoryId: 'utility-vans' },
-    { id: 'a-401', assetName: 'Workshop extinguisher 3A', assetType: 'Fire safety', site: 'North Depot', condition: 'Inspection due', sectionId: 'fleet', categoryId: 'safety-equipment', subcategoryId: 'fire-extinguishers' },
-  ];
-
   searchText = '';
   searchCommand: GroupedDataBrowserSearchCommand | null = null;
   selectedNodeId: string | null = null;
-  hierarchy = this.createHierarchy(this.allAssets);
-  rows = this.allAssets.slice(0, this.browserConfig.pageSize);
-  totalRecords = this.allAssets.length;
+  hierarchy: GroupedDataNode[] = [];
+  rows: AssetRow[] = [];
+  totalRecords = 0;
   currentPage = 0;
   loading = false;
+  searching = false;
   actionFeedback = '';
 
-  private activeAssets = this.allAssets;
+  private jobId: string | null = null;
   private readonly markedForDeletionIds = new Set<string>();
   private searchRequestId = 0;
   private lastPageRequest: GroupedDataPageRequest | null = null;
   private activeSort: GroupedDataSortRequest | null = null;
+  private searchSubscription?: Subscription;
+  private pageSubscription?: Subscription;
+
+  constructor(private readonly api: AssetCatalogApiService) {}
+
+  ngOnDestroy(): void {
+    this.searchSubscription?.unsubscribe();
+    this.pageSubscription?.unsubscribe();
+  }
 
   requestSearch(): void {
     this.searchCommand = {
@@ -152,42 +101,70 @@ export class AssetCatalogDemoComponent {
     };
   }
 
+  // Step 1: start the job, poll it, then get the table desc (counts) and build the nav.
   onBrowserSearch(query: string): void {
-    const normalizedQuery = query.toLocaleLowerCase();
-    this.activeAssets = this.allAssets.filter(asset =>
-      `${asset.assetName} ${asset.assetType} ${asset.site} ${asset.condition}`
-        .toLocaleLowerCase()
-        .includes(normalizedQuery)
-    );
-    this.hierarchy = this.createHierarchy(this.activeAssets);
-    this.selectedNodeId = null;
-    this.totalRecords = this.activeAssets.length;
+    this.searchSubscription?.unsubscribe();
+    this.pageSubscription?.unsubscribe();
+
+    this.searching = true;
+    this.loading = false;
+    this.jobId = null;
+    this.hierarchy = [];
+    this.rows = [];
+    this.totalRecords = 0;
     this.currentPage = 0;
-    this.rows = this.activeAssets.slice(0, this.browserConfig.pageSize);
+    this.selectedNodeId = null;
     this.lastPageRequest = null;
+
+    this.searchSubscription = this.api.startSearch(query).pipe(
+      switchMap(jobId => this.api.pollUntilFinished(jobId).pipe(
+        switchMap(() => this.api.getTableDesc(jobId)),
+        map(tableDesc => ({ jobId, tableDesc }))
+      ))
+    ).subscribe({
+      next: ({ jobId, tableDesc }) => {
+        this.jobId = jobId;
+        this.searching = false;
+        // Setting the hierarchy makes the browser select the root and request page 0.
+        this.hierarchy = mapTableDescToNodes(tableDesc);
+      },
+      error: () => { this.searching = false; },
+    });
   }
 
   onNodeSelected(node: GroupedDataNode): void {
     this.totalRecords = node.count;
   }
 
+  // Step 2: the nav exists, so query the table once per page-plan segment.
   loadPage(request: GroupedDataPageRequest): void {
+    const jobId = this.jobId;
+    if (!jobId) {
+      return;
+    }
+
+    this.pageSubscription?.unsubscribe();
     this.lastPageRequest = request;
     this.currentPage = request.pageIndex;
     this.loading = true;
 
-    const rows = request.pagePlan.segments.flatMap(segment => {
-      const metadata = segment.metadata ?? {};
-      const matchingAssets = this.activeAssets.filter(asset =>
-        Object.entries(metadata).every(([key, value]) => asset[key as keyof AssetRow] === value)
-      );
-      return matchingAssets.slice(segment.offset, segment.offset + segment.take);
-    });
+    const queries = mapPagePlanToQueries(request.pagePlan, this.activeSort);
+    const segmentResults$ = queries.length
+      ? forkJoin(queries.map(query => this.api.queryTable(jobId, query)))
+      : of([]);
 
-    this.rows = this.sortRows(rows.map(row =>
-      this.markedForDeletionIds.has(row.id) ? { ...row, condition: 'Marked for deletion' } : row
-    ));
-    this.loading = false;
+    this.pageSubscription = segmentResults$.pipe(
+      map(results => results.flat().map(mapAssetRecordToRow)),
+      map(rows => rows.map(row =>
+        this.markedForDeletionIds.has(row.id) ? { ...row, condition: 'Marked for deletion' } : row
+      ))
+    ).subscribe({
+      next: rows => {
+        this.rows = rows;
+        this.loading = false;
+      },
+      error: () => { this.loading = false; },
+    });
   }
 
   onRowAction(request: GroupedDataRowActionRequest<AssetRow>): void {
@@ -212,63 +189,4 @@ export class AssetCatalogDemoComponent {
     }
   }
 
-  private sortRows(rows: AssetRow[]): AssetRow[] {
-    if (!this.activeSort?.column || !this.activeSort.direction) {
-      return rows;
-    }
-
-    const { column, direction } = this.activeSort;
-    return [...rows].sort((left, right) => {
-      const leftValue = String(left[column as keyof AssetRow] ?? '');
-      const rightValue = String(right[column as keyof AssetRow] ?? '');
-      return leftValue.localeCompare(rightValue) * (direction === 'asc' ? 1 : -1);
-    });
-  }
-
-  private createHierarchy(rows: AssetRow[]): GroupedDataNode[] {
-    const sections = this.sections.flatMap(section => {
-      const categories = section.categories.flatMap(category => {
-        const subcategories = category.subcategories.flatMap(subcategory => {
-          const count = rows.filter(asset => asset.subcategoryId === subcategory.id).length;
-          return count > 0 ? [{
-            id: subcategory.id,
-            label: subcategory.label,
-            count,
-            type: 'subcategory',
-            metadata: {
-              sectionId: section.id,
-              categoryId: category.id,
-              subcategoryId: subcategory.id,
-            },
-          }] : [];
-        });
-        const count = subcategories.reduce((total, subcategory) => total + subcategory.count, 0);
-        return count > 0 ? [{
-          id: category.id,
-          label: category.label,
-          count,
-          type: 'category',
-          metadata: { sectionId: section.id, categoryId: category.id },
-          children: subcategories,
-        }] : [];
-      });
-      const count = categories.reduce((total, category) => total + category.count, 0);
-      return count > 0 ? [{
-        id: section.id,
-        label: section.label,
-        count,
-        type: 'section',
-        metadata: { sectionId: section.id },
-        children: categories,
-      }] : [];
-    });
-
-    return [{
-      id: 'all-assets',
-      label: 'All Assets',
-      count: rows.length,
-      type: 'all',
-      children: sections,
-    }];
-  }
 }

@@ -1,4 +1,5 @@
 export { GroupedDataBrowserComponent } from './components/grouped-data-browser/grouped-data-browser.component';
+export { GroupedDataBrowserRowActionsComponent } from './components/grouped-data-browser-row-actions/grouped-data-browser-row-actions.component';
 export { createGroupedDataBrowserDefaultConfig } from './configs/grouped-data-browser-default.config';
 export type {
   GroupedDataBrowserConfig,

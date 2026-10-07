@@ -1,0 +1,11 @@
+<div class="row-actions">
+  <button
+    *ngFor="let action of actions"
+    mat-icon-button
+    type="button"
+    [attr.aria-label]="action.label"
+    [title]="action.tooltip || action.label"
+    (click)="onActionClick(action, $event)">
+    <mat-icon>{{ action.icon }}</mat-icon>
+  </button>
+</div>
